@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Room Preference Network</title>
+    <style>
+        /* Global Styles for Sleek Look */
+        body, html {
+            margin: 0;
+            height: 100%;
+            overflow: hidden;
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            color: #333;
+            background-color: #f8f8f8;
+        }
+
+        h1, h2 {
+            font-weight: bold;
+            color: #222;
+            margin-bottom: 0.5em;
+            text-align: center;
+        }
+
+        /* Splash Screen Styles */
+        #splash-screen {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #f8f8f8;
+            padding: 2em;
+            z-index: 20;
+            overflow: hidden;
+            opacity: 1; /* Initial opacity */
+            transform: scale(1); /* Initial scale */
+            transition: opacity 0.5s ease-out, transform 0.5s ease-out; /* Transition for fade out */
+        }
+
+        /* Fade out animation for splash screen */
+        #splash-screen.fade-out {
+            opacity: 0;
+            transform: scale(0.95);
+        }
+
+        #splash-background {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        #splash-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(255, 255, 255, 0.4);
+            pointer-events: none;
+            z-index: 2;
+        }
+
+        .moving-emoji {
+            position: absolute;
+            opacity: 0;
+            animation: emojiSlide 80s linear infinite;
+            will-change: transform;
+            color: #000;
+            -webkit-text-stroke: 0.1px rgba(0,0,0,0.5);
+        }
+
+        @keyframes emojiSlide {
+            0% { transform: translateX(-2000px); opacity: 0; }
+            10% { opacity: 1; }
+            100% { transform: translateX(4000px); opacity: 1; }
+        }
+
+        #splash-screen-icon {
+            width: 80px;
+            height: 80px;
+            margin-bottom: 15px;
+            opacity: 0.8;
+            z-index: 3;
+        }
+
+        #splash-screen h2, #splash-screen p {
+            text-align: center;
+            z-index: 3;
+        }
+
+        /* File Upload Section */
+        #fileUploadSection {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            z-index: 3;
+        }
+
+        #fileInputContainer {
+            position: relative;
+            display: inline-block;
+        }
+
+        /* Continue Button & No File Text */
+        #continueButton {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1em;
+            cursor: pointer;
+            background-color: #007bff;
+            color: white;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        #continueButton:hover, #continueButton:focus {
+            background-color: #0056b3;
+            transform: scale(1.03);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.15);
+        }
+
+        #noFileChosenText {
+            color: red;
+            margin-top: 0.5em;
+            display: none;
+        }
+
+        /* New Loader Animation Styles */
+        #loading-bar-container {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #ffffff;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            z-index: 10;
+            pointer-events: none;
+            display: none; /* Hidden by default */
+        }
+
+        .loader {
+            display: inline-grid;
+            padding: 5px;
+            background: #fff;
+            filter: blur(4px) contrast(12);
+        }
+        .loader:before,
+        .loader:after {
+            content: "";
+            grid-area: 1/1;
+            height: 40px;
+            aspect-ratio: 3;
+            --c: #0000 64%,#000 66% 98%,#0000 101%;
+            background:
+              radial-gradient(35% 146% at 50% 159%,var(--c)) 0 0,
+              radial-gradient(35% 146% at 50% -59%,var(--c)) 100% 100%;
+            background-size: calc(200%/3) 50%;
+            background-repeat: repeat-x;
+        }
+        .loader:before {
+            -webkit-mask: repeating-linear-gradient(90deg,#000 0 8%,#0000 0 15%);
+        }
+        .loader:after {
+            clip-path: inset(0 100% 0 0);
+            animation: l13 5s infinite linear; /* Increased animation duration to 5s */
+        }
+        @keyframes l13{
+            50% {clip-path: inset(0)}
+            to {clip-path: inset(0 0 0 100%)}
+            }
+
+
+        #loading-text {
+            margin-top: 20px;
+            font-size: 1.2em;
+            color: #555;
+        }
+
+        /* Visualization Styles (updated link style) */
+        #visualization {
+            display: none;
+            width: 100%;
+            height: 100vh;
+            min-height: 600px;
+            z-index: 1;
+            opacity: 0; /* Initial opacity for fade in */
+            transform: scale(0.95); /* Initial scale for zoom in */
+            transition: opacity 0.5s ease-in, transform 0.5s ease-in; /* Transition for fade in */
+        }
+
+        /* Fade in animation for visualization */
+        #visualization.fade-in {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+
+        svg {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        .node {
+            fill: lightblue;
+            stroke: #333;
+            stroke-width: 0.7px;
+        }
+
+        .link {
+            stroke: green;
+            stroke-opacity: 0.6;
+            fill: none;
+            stroke-width: 2px; /* Increased stroke-width of green links */
+        }
+
+        .mutual-link {
+            stroke: red;
+            stroke-width: 4px;
+        }
+
+        .node-text {
+            font-size: 10px;
+            pointer-events: none;
+            dominant-baseline: middle;
+            text-anchor: middle;
+            fill: #333;
+        }
+
+        /* File Input Styles (unchanged) */
+        #fileInput {
+            padding: 14px 20px;
+            border: 2px solid #bbb;
+            border-radius: 30px;
+            font-size: 1.1em;
+            cursor: pointer;
+            background-color: white;
+            color: transparent;
+            transition: all 0.3s ease;
+            box-shadow: 0 3px 6px rgba(0,0,0,0.08);
+            font-weight: 500;
+            min-width: 200px;
+            opacity: 0;
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 1;
+            cursor: pointer;
+        }
+
+        #fileInputLabel {
+            padding: 14px 20px;
+            border: 2px solid #bbb;
+            border-radius: 30px;
+            font-size: 1.1em;
+            background-color: white;
+            color: #555;
+            box-shadow: 0 3px 6px rgba(0,0,0,0.08);
+            display: block;
+            text-align: center;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        #fileInput:hover + #fileInputLabel {
+            background-color: #f0f0f0;
+            border-color: #999;
+            color: #333;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.12);
+        }
+
+        /* Info Button and Popup Styles (unchanged) */
+        #info-button {
+            position: absolute;
+            bottom: 90px; /* Adjusted position: raised up */
+            left: 30px;
+            background-color: #e0f7fa;
+            border: 2px solid #b2ebf2;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3em;
+            cursor: pointer;
+            color: #00bcd4;
+            opacity: 0.9;
+            transition: opacity 0.3s ease, transform 0.2s ease;
+            z-index: 100;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        #info-button:hover, #info-button:focus {
+            opacity: 1;
+            transform: scale(1.1);
+            background-color: #b2ebf2;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.15);
+        }
+
+        #info-popup {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            justify-content: center;
+            align-items: center;
+            z-index: 30;
+            opacity: 0;
+            transition: opacity 0.4s ease-in-out;
+            pointer-events: none;
+        }
+
+        #info-popup.show {
+            display: flex;
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        #info-popup-content {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            width: 80%;
+            max-width: 600px;
+            position: relative;
+        }
+
+        #close-info-popup {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-size: 1.2em;
+            cursor: pointer;
+            color: #777;
+            background: none;
+            border: none;
+        }
+
+        #close-info-popup:hover {
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <div id="splash-screen">
+        <div id="splash-background"></div>
+        <div id="splash-overlay"></div>
+        <svg id="splash-screen-icon" viewBox="0 0 100 100">
+            <circle cx="50" cy="50" r="40" fill="#007bff" opacity="0.1"/>
+            <g stroke="#007bff" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M30 30 L70 70 M70 30 L30 70"/>
+                <circle cx="30" cy="30" r="8" fill="white"/>
+                <circle cx="70" cy="70" r="8" fill="white"/>
+                <circle cx="70" cy="30" r="8" fill="white"/>
+                <circle cx="30" cy="70" r="8" fill="white"/>
+            </g>
+        </svg>
+        <h2>Visualize Your Roommate Preferences</h2>
+        <p>Upload a CSV file containing room preferences to generate an interactive network visualization. Discover mutual preferences and potential roommate pairings at a glance.</p>
+        <div id="fileUploadSection">
+            <div id="fileInputContainer">
+                <input type="file" id="fileInput" accept=".csv">
+                <label for="fileInput" id="fileInputLabel">Upload CSV File</label>
+            </div>
+            <p id="noFileChosenText">No file chosen. Please upload a CSV file.</p>
+            <br>
+            <button id="continueButton" disabled>Continue</button>
+        </div>
+        <button id="info-button">?</button>
+    </div>
+
+    <div id="info-popup">
+        <div id="info-popup-content">
+            <button id="close-info-popup">X</button>
+            <h2>CSV File Format Guide</h2>
+            <p>To ensure the visualization works correctly, please format your CSV file as follows:</p>
+            <ol>
+                <li>Each row in the CSV file represents one person.</li>
+                <li>The <strong>first entry in each row must be the person's name</strong>.</li>
+                <li>Following the person's name, list the names of their preferred roommates, separated by commas.</li>
+                <li><strong>Use quotes around names only if they contain commas or special characters.</strong> This is standard CSV practice, for example when exporting from Google Sheets or Excel.</li>
+                <li>If a person has no preferences, leave the rest of the row empty after their name.</li>
+            </ol>
+            <p><strong>Example CSV Format (like Google Sheets export):</strong></p>
+            <pre><code>Person A,"Person B, Person C"
+Person B,Person A
+Person C,Person D
+Person D,Person C
+Person E
+</code></pre>
+            <p>In this example:</p>
+            <ul>
+                <li>Person A prefers "Person B, Person C" (treated as a single preference because of the quotes and comma within).</li>
+                <li>Person B prefers Person A.</li>
+                <li>Person C prefers Person D.</li>
+                <li>Person D prefers Person C.</li>
+                <li>Person E has no preferences listed.</li>
+            </ul>
+            <p>Please ensure your CSV file adheres to this format for optimal visualization.</p>
+        </div>
+    </div>
+
+    <div id="loading-bar-container">
+        <div class="loader"></div>  <!-- Replaced step-based loading bar with the new loader -->
+        <p id="loading-text">Loading Network Data...</p>
+    </div>
+
+    <div id="visualization"></div>
+
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script>
+        const splashScreen = document.getElementById('splash-screen');
+        const splashBackground = document.getElementById('splash-background');
+        const loadingBarContainer = document.getElementById('loading-bar-container');
+        const loadingBar = document.getElementById('loading-bar');
+        const visualizationDiv = document.getElementById('visualization');
+        const fileInput = document.getElementById('fileInput');
+        const fileInputLabel = document.getElementById('fileInputLabel');
+        const continueButton = document.getElementById('continueButton');
+        const noFileChosenText = document.getElementById('noFileChosenText');
+        const infoButton = document.getElementById('info-button');
+        const infoPopup = document.getElementById('info-popup');
+        const closeInfoPopupButton = document.getElementById('close-info-popup');
+
+
+        const emojis = [
+            '🙋‍♀️', '🙋‍♂️', '👦', '👧',
+            '🧑‍🤝‍🧑',
+            '😊',
+            '🤝',
+            '🙌',
+            '👋',
+            '👍',
+            '🏠',
+            '🚪',
+            '🛋️',
+            '🛏️',
+            '❤️',
+            '⭐',
+            '🌟',
+            '💡',
+            '🕊️',
+            '🌱',
+            '✨',
+            '🎈',
+            '🎉',
+            '🍀',
+            '🌈',
+        ];
+        const emojiCount = 45;
+        const emojiSizeRange = [40, 70];
+        const animationDurationRange = [120, 140];
+
+        function createEmoji() {
+            const emojiSpan = document.createElement('span');
+            emojiSpan.classList.add('moving-emoji');
+            emojiSpan.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+            emojiSpan.style.fontSize = `${Math.random() * (emojiSizeRange[1] - emojiSizeRange[0]) + emojiSizeRange[0]}px`;
+            emojiSpan.style.top = `${Math.random() * 100}vh`;
+            emojiSpan.style.left = `${Math.random() * 6000 - 2000}px`;
+            emojiSpan.style.animationDuration = `${Math.random() * (animationDurationRange[1] - animationDurationRange[0]) + animationDurationRange[0]}s`;
+            splashBackground.appendChild(emojiSpan);
+        }
+
+        function initializeBackgroundEmojis() {
+            for (let i = 0; i < emojiCount; i++) {
+                createEmoji();
+            }
+            setInterval(createEmoji, 1500);
+        }
+
+        initializeBackgroundEmojis();
+
+        fileInput.addEventListener('change', handleFileSelect, false);
+        continueButton.addEventListener('click', visualizeUploadedData);
+        infoButton.addEventListener('click', () => {
+            infoPopup.classList.add('show');
+        });
+        closeInfoPopupButton.addEventListener('click', () => {
+            infoPopup.classList.remove('show');
+        });
+
+        let csvDataToVisualize = null;
+
+        function handleFileSelect(evt) {
+            const file = evt.target.files[0];
+            if (file) {
+                noFileChosenText.style.display = 'none';
+                continueButton.disabled = false;
+                fileInputLabel.textContent = file.name;
+
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const csvText = e.target.result;
+                    csvDataToVisualize = parseCSVData(csvText);
+                }
+                reader.onerror = function(e) {
+                    alert('Error reading file');
+                    continueButton.disabled = true;
+                }
+                reader.readAsText(file);
+            } else {
+                fileInputLabel.textContent = 'Upload CSV File';
+                continueButton.disabled = true;
+            }
+        }
+
+        function visualizeUploadedData() {
+            if (!csvDataToVisualize) {
+                noFileChosenText.style.display = 'block';
+                return;
+            }
+
+            splashScreen.classList.add('fade-out');
+            loadingBarContainer.style.display = 'flex';
+
+            const graphData = transformDataForD3(csvDataToVisualize);
+
+            animateLoadingBar(() => {
+                splashScreen.style.display = 'none';
+                visualizeNetwork(graphData);
+                loadingBarContainer.style.display = 'none';
+
+                visualizationDiv.style.display = 'block';
+                visualizationDiv.offsetHeight;
+                visualizationDiv.classList.add('fade-in');
+
+
+            });
+        }
+
+
+        function animateLoadingBar(callback) {
+            setTimeout(callback, 3000);
+        }
+
+
+        function parseCSVData(csvText) {
+            const lines = csvText.trim().split('\n');
+            const data = [];
+            const allPersons = new Set();
+
+            for (const line of lines) {
+                const parts = line.split(',');
+                const person = parts[0].trim().replace(/^"|"$/g, '');
+                allPersons.add(person);
+                const preferencesString = parts.slice(1).join(',').trim().replace(/^"|"$/g, '');
+                const preferences = preferencesString ? preferencesString.split(',').map(p => p.trim()) : [];
+                preferences.forEach(pref => allPersons.add(pref));
+                data.push({ person: person, preferences: preferences });
+            }
+            return { data: data, allPersons: Array.from(allPersons) };
+        }
+
+        function transformDataForD3(parsedDataResult) {
+            const parsedData = parsedDataResult.data;
+            const allPersonNames = parsedDataResult.allPersons;
+            const nodes = allPersonNames.map(personName => ({ id: personName }));
+            const links = [];
+            parsedData.forEach(source => {
+                source.preferences.forEach(targetName => {
+                    const targetNode = nodes.find(node => node.id === targetName);
+                    if (targetNode) {
+                        let isMutual = false;
+                        const targetPersonData = parsedData.find(p => p.person === targetName);
+                        if (targetPersonData && targetPersonData.preferences.includes(source.person)) {
+                            isMutual = true;
+                        }
+                        links.push({ source: source.person, target: targetName, mutual: isMutual });
+                    }
+                });
+            });
+            return { nodes: nodes, links: links };
+        }
+
+        function visualizeNetwork(graphData) {
+            d3.select("#visualization").selectAll("*").remove();
+
+            const svg = d3.select("#visualization").append("svg")
+                .attr("width", "100%")
+                .attr("height", "100%");
+
+            const g = svg.append("g");
+
+            svg.call(d3.zoom()
+                .extent([[0, 0], [800, 600]])
+                .scaleExtent([0.5, 10])
+                .on("zoom", zoomed));
+
+            function zoomed({ transform }) {
+                g.attr("transform", transform);
+            }
+
+
+            const width = document.getElementById('visualization').offsetWidth;
+            const height = document.getElementById('visualization').offsetHeight;
+
+            const simulation = d3.forceSimulation(graphData.nodes)
+                .force("link", d3.forceLink(graphData.links).id(d => d.id).distance(250))
+                .force("charge", d3.forceManyBody().strength(-400))
+                .force("center", d3.forceCenter(width / 2, height / 2));
+
+            const link = g.append("g")
+                .attr("class", "links")
+                .selectAll("line")
+                .data(graphData.links)
+                .enter().append("line")
+                .attr("class", d => d.mutual ? "mutual-link" : "link");
+
+            const arrowHeadsGroup = g.append("g").attr("class", "arrow-heads");
+
+            const node = g.append("g")
+                .attr("class", "nodes")
+                .selectAll("g")
+                .data(graphData.nodes)
+                .enter().append("g")
+                .call(d3.drag()
+                    .on("start", dragstarted)
+                    .on("drag", dragged)
+                    .on("end", dragended));
+
+            node.append("rect")
+                .attr("class", "node")
+                .attr("width", 100)
+                .attr("height", 25)
+                .attr("rx", 5)
+                .attr("ry", 5)
+                .attr("x", -50)
+                .attr("y", -12.5);
+
+            node.append("text")
+                .attr("class", "node-text")
+                .text(d => d.id);
+
+            simulation
+                .on("tick", () => {
+                    link
+                        .attr("x1", d => d.source.x)
+                        .attr("y1", d => d.source.y)
+                        .attr("x2", d => d.target.x)
+                        .attr("y2", d => d.target.y);
+
+                    node
+                        .attr("transform", d => `translate(${d.x},${d.y})`);
+
+                    updateArrowHeads();
+                })
+                .on("end", () => {
+                    // Removed BBox and zoom/center code from here
+                });
+
+
+            function dragstarted(event, d) {
+                if (!event.active) simulation.alphaTarget(0.3).restart();
+                d.fx = d.x;
+                d.fy = d.y;
+            }
+
+            function dragged(event, d) {
+                d.fx = event.x;
+                d.fy = event.y;
+            }
+
+            function dragended(event, d) {
+                if (!event.active) simulation.alphaTarget(0);
+                d.fx = event.x;
+                d.fy = d.y;
+            }
+
+            function updateArrowHeads() {
+                arrowHeadsGroup.selectAll("path").remove();
+
+                const arrowSpacing = 30;
+                const arrowSize = 10; // Size of the triangle arrowhead
+
+                graphData.links.forEach(d => {
+                    if (!d.mutual) {
+                        const x1 = d.source.x;
+                        const y1 = d.source.y;
+                        const x2 = d.target.x;
+                        const y2 = d.target.y;
+
+                        const linkLength = Math.sqrt((x2 - x1)**2 + (y2 - y1)**2);
+                        const numArrows = Math.max(1, Math.floor(linkLength / arrowSpacing));
+
+                        for (let i = 0; i < numArrows; i++) {
+                            const fraction = (i + 1) / (numArrows + 1);
+
+                            const arrowX = x1 + (x2 - x1) * fraction;
+                            const arrowY = y1 + (y2 - y1) * fraction;
+                            const angle = Math.atan2(y2 - y1, x2 - x1) * (180 / Math.PI);
+
+                            arrowHeadsGroup.append("path") // Changed to path for triangle
+                                .attr("d", `M -${arrowSize/2},-${arrowSize/3} L ${arrowSize/2},0 L -${arrowSize/2},${arrowSize/3} Z`) // Triangle path
+                                .attr("transform", `translate(${arrowX},${arrowY}) rotate(${angle})`)
+                                .attr("fill", "green")
+                                .style("stroke", "none");
+                        }
+                    }
+                });
+            }
+        }
+    </script>
+</body>
+</html>
